@@ -1,5 +1,6 @@
 ;Este código calcula o n-ésimo número na sequência Fibonacci de forma iterativa
-	
+;Salva a saída em um arquivo binário
+
 ;nasm -f elf64 calculoFibonacci.asm 
 ;ld calculoFibonacci.o -o calculoFibonacci.x
 
