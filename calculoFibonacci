@@ -1,5 +1,7 @@
-;nasm -f elf64 \[LMP01\]LucasBatistaSantos_FelipeSella.asm 
-;ld \[LMP01\]LucasBatistaSantos_FelipeSella.o -o \[LMP01\]LucasBatistaSantos_FelipeSella.x
+;Este código calcula o n-ésimo número na sequência Fibonacci de forma iterativa
+	
+;nasm -f elf64 calculoFibonacci.asm 
+;ld calculoFibonacci.o -o calculoFibonacci.x
 
 %define maxChars 3
 
