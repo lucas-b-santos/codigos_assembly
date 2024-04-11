@@ -38,11 +38,12 @@ section .bss
 
 
 section .text
-	global _start
+	global main
 
-_start:
-   ; ssize_t write(int fd , const void *buf, size_t count);
-   ; rax     write(int rdi, const void *rsi, size_t rdx  );
+main:
+   push rbp
+   mov rbp, rsp
+init:
    mov rax, 1  ; WRITE
    mov rdi, 1
    lea rsi, [strEntrada]
@@ -61,7 +62,7 @@ leitura:
    syscall
 
    cmp byte [entrada], 10 ; cata a posição do enter
-   je _start
+   je init
 
    mov r12, rax ; move a quantidade de caracteres lidos para r12
 
@@ -181,6 +182,9 @@ escreveArquivo:
    syscall
 
 fim:
+   mov rsp, rbp
+   pop rbp
+
    mov rax, 60 ; encerra o programa
    mov rdi, 0
    syscall
