@@ -31,6 +31,7 @@ main:
     mov esi, [numv + eax*4]
     xor rax, rax
     call printf
+
 fim:
     mov rsp, rbp
     pop rbp
