@@ -3,7 +3,6 @@
 ; ./Calculadora.x
 
 section .data
-    strCtrlSaida : db "%lf %c %lf", 10, 0
     strCtrlEntrada : db "%f %c %f", 0
 
     strErro : db "%lf %c %lf = funcionalidade não disponível", 10, 0
@@ -15,14 +14,6 @@ section .data
 
     openingMode : db "a", 0
 
-; section .bss
-    ; op1 : resd 1
-    ; op2 : resd 1
-    ; operador : resb 1
-    ; result : resd 1
-    ; fileP : resq 1
-    ; operador2: resb 1
-
 section .text
     extern printf
     extern scanf
@@ -30,154 +21,173 @@ section .text
     extern fclose
     extern fprintf
     global main
-
-
+    
 main:
-    ;Prologo
     push rbp
     mov rbp, rsp
 
-    xor rax, rax
-
-    sub rsp, 4 ; op1    
-    mov [rbp-4], eax
-
-    sub rsp, 1 ; operador    
-    mov byte [rbp-5], 0
-
-    sub rsp, 4 ; op2
-    mov [rbp-9], eax
+    ;==========================================================================================
+    ; Reserva de memória para variáveis locais
+    ; Para chamadas em C, necessário alinhar a pilha em 16 bytes
+    ; Então, subtrai de rsp o próximo múltiplo de 16 em quantidade necessária para as variáveis
+    sub rsp, 16
+    ;==========================================================================================
 
     ;Leitura das variaveis
-    xor rax, rax
     mov rdi, strCtrlEntrada
-    lea rsi, [rbp-4]
-    lea rdx, [rbp-5]
-    lea rcx, [rbp-9]
-    ; call scanf
+    lea rsi, [rbp-4] ;primeira variavel local contendo o operando 1
+    lea rdx, [rbp-5] ;segunda variavel local contendo o operador
+    lea rcx, [rbp-9] ;terceira variavel local contendo o operando 2
+    call scanf
 
-    ; movss xmm0, [rbp]
-    ; movss xmm1, [rbp-5]
+    ;passando op1 e op2 como parametros para as funcoes
+    movss xmm0, [rbp-4] 
+    movss xmm1, [rbp-9]
 
-    ; mov rax, 2
-    ; mov rdi, strOpcInvalida
-    ; mov rsi, [rbp-4]
-    ; call printf
-b1:
-    jmp fim
+    ; switch-case 
 
-    ; switch-case
+    cmp byte [rbp-5], 'a' 
+    je callAdicao
 
-    ; cmp byte [operador], 'a' 
-    ; mov byte operador2, [operador]
-    ; je callAdicao
+    cmp byte [rbp-5], 's'
+    je callSubtracao
 
-    ; cmp byte [operador], 's'
-    ; mov byte operador2, [operador]
-    ; je callSubtracao
+    cmp byte [rbp-5], 'm'
+    je callMult
 
-    ; cmp byte [operador], 'm'
-    ; mov byte operador2, [operador]
-    ; je callMult
+    cmp byte [rbp-5], 'd'
+    je callDivisao
 
-    ; cmp byte [operador], 'd'
-    ; mov byte operador2, [operador]
-    ; je callDivisao
-
-    ; cmp byte [operador], 'e'
-    ; mov byte operador2, [operador]
-    ; je callExp
+    cmp byte [rbp-5], 'e'
+    je callExp
 
     ;Caso opcao invalida
-    ; xor rax, rax
-    ; mov rdi, strOpcInvalida
-    ; call printf
+    xor rax, rax
+    mov rdi, strOpcInvalida
+    call printf
 
-    ; jmp fim
+    jmp fim
 
-; callAdicao:
-;     call adicao
+callAdicao:
+    call adicao
 
-;     xor rax, rax
+    movss [rbp-13], xmm0
+
+    xor rax, rax
+    mov rdi, fileName
+    mov rsi, openingMode
+    call fopen
+
+    movss xmm2, [rbp-13]
+    movss xmm0, [rbp-4]
+    movss xmm1, [rbp-9]
+    mov rdi, '+'
+    mov rsi, rax
+    call escrevesolucaoOK
     
-;     mov rdi, fileName
-;     mov rsi, openingMode
-;     call fopen
+    jmp fim
 
-;     mov [fileP], rax
+callSubtracao:
+    call subtracao  
 
-;     call escrevesolucaoOK
-;     jmp fim
+    movss [rbp-13], xmm0
 
-; callSubtracao:
+    xor rax, rax
+    mov rdi, fileName
+    mov rsi, openingMode
+    call fopen
 
-;     call subtracao  
+    ;passagem de parametros para escrever arquivo
+    movss xmm2, [rbp-13]
+    movss xmm0, [rbp-4]
+    movss xmm1, [rbp-9]
+    mov rdi, '-'
+    mov rsi, rax ; ponteiro do arquivo retornado por fopen passa para rsi
+    call escrevesolucaoOK
+    jmp fim
 
-;     xor rax, rax
+callMult:
+    call multiplicacao  
+
+    movss [rbp-13], xmm0
+
+    xor rax, rax
+    mov rdi, fileName
+    mov rsi, openingMode
+    call fopen
+
+    movss xmm2, [rbp-13]
+    movss xmm0, [rbp-4]
+    movss xmm1, [rbp-9]
+    mov rdi, '*'
+    mov rsi, rax
+    call escrevesolucaoOK
     
-;     mov rdi, fileName
-;     mov rsi, openingMode
-;     call fopen
+    jmp fim
 
-;     mov [fileP], rax
-
-;     call escrevesolucaoOK
-;     jmp fim
-
-; callMult:
-
-;     call multiplicacao
-
-;     xor rax, rax
+callDivisao:
+    xor rax, rax
     
-;     mov rdi, fileName
-;     mov rsi, openingMode
-;     call fopen
+    mov rdi, fileName
+    mov rsi, openingMode
+    call fopen
 
-;     mov [fileP], rax
+    ; Recupera valores para os registradores
+    movss xmm0, [rbp-4] 
+    movss xmm1, [rbp-9]
 
-;     call escrevesolucaoOK
-;     jmp fim
+    mov rbx, '/' 
 
-; callDivisao:
-;     xor rax, rax
+    mov dword [rbp-13], 0
+
+    COMISS xmm1, [rbp-13]
+    je callEscreveNOTOK
+
+    call divisao
+
+    ;passagem de parametros para escrever arquivo
+    movss xmm2, xmm0 ;resultado
+    movss xmm0, [rbp-4] ;op1
+    movss xmm1, [rbp-9] ;op2
+    mov rdi, rbx ;operador
+    mov rsi, rax ; ponteiro do arquivo retornado por fopen passa para rsi
+    call escrevesolucaoOK
+    jmp fim
+
+
+callExp:
+    xor rax, rax
     
-;     mov rdi, fileName
-;     mov rsi, openingMode
-;     call fopen
+    mov rdi, fileName
+    mov rsi, openingMode
+    call fopen
 
-;     mov [fileP], rax
-
-;     COMISS xmm1, 0
-;     je callEscreveNOTOK
-
-;     call divisao
-;     call escrevesolucaoOK
-;     jmp fim
-
-
-; callExp:
-;     xor rax, rax
+    movss xmm0, [rbp-4] 
+    movss xmm1, [rbp-9]
     
-;     mov rdi, fileName
-;     mov rsi, openingMode
-;     call fopen
+    mov rbx, '^'
 
-;     mov [fileP], rax
+    mov dword [rbp-13], 0
 
-;     COMISS xmm1, 0
-;     jb callEscreveNOTOK
+    COMISS xmm1, [rbp-13]
+    jb callEscreveNOTOK
 
-;     call exponenciacao
-;     call escrevesolucaoOK
-;     jmp fim
+    call exponenciacao
 
-; callEscreveNotOK:
+    ;passagem de parametros para escrever arquivo
+    movss xmm2, xmm0 ;resultado
+    movss xmm0, [rbp-4] ;op1
+    movss xmm1, [rbp-9] ;op2
+    mov rdi, rbx ;operador
+    mov rsi, rax ; ponteiro do arquivo retornado por fopen passa para rsi
+    call escrevesolucaoOK
+    jmp fim
 
-;     xor rax, rax
-;     mov rdi, 
-;     call printf
-;     jmp fim
+callEscreveNOTOK:
+    mov rdi, rbx
+    mov rsi, rax
+    call escrevesolucaoNOTOK
+    jmp fim
 
 fim:
     mov rsp, rbp
@@ -187,140 +197,156 @@ fim:
     mov rdi, 0
     syscall
     
-; adicao: 
-;     push rbp
-;     mov rbp, rsp
+adicao: 
+    push rbp
+    mov rbp, rsp
 
-;     ;Adicao
-;     addss xmm0, xmm1
+    ;Adicao
+    addss xmm0, xmm1
 
-;     mov rbp, rsp
-;     pop rbp
-;     ret 
+    mov rsp, rbp
+    pop rbp
+    ret 
 
-; subtracao:
-;     push rbp
-;     mov rbp, rsp
+subtracao:
+    push rbp
+    mov rbp, rsp
 
-;     ;Subtracao
-;     subss xmm0, xmm1
+    ;Subtracao
+    subss xmm0, xmm1
 
-;     mov rbp, rsp
-;     pop rbp
-;     ret
+    mov rsp, rbp
+    pop rbp
+    ret
 
-; multiplicacao:
-;     push rbp
-;     mov rbp, rsp
+multiplicacao:
+    push rbp
+    mov rbp, rsp
 
-;     ;Multiplicacao
-;     mulss xmm0, xmm1
+    ;Multiplicacao
+    mulss xmm0, xmm1
 
-;     mov rbp, rsp
-;     pop rbp
-;     ret
+    mov rsp, rbp
+    pop rbp
+    ret
     
-; divisao:
-;     push rbp
-;     mov rbp, rsp
+divisao:
+    push rbp
+    mov rbp, rsp
 
-;     ;Divisão
-;     divss xmm0, xmm1
+    ;Divisão
+    divss xmm0, xmm1
 
-;     mov rbp, rsp
-;     pop rbp
-;     ret
+    mov rsp, rbp
+    pop rbp
+    ret
 
-; exponenciacao:
-;     push rbp
-;     mov rbp, rsp
+exponenciacao:
+    push rbp
+    mov rbp, rsp
 
-;     ;Potenciacao
+    sub rsp, 16
 
-;     comiss xmm0, 0
-;     je casoOP1Equals0
-    
-;     CVTTSS2SI r8, xmm1 
+    mov dword [rbp-4], 0
+    mov dword [rbp-8], 1
 
-;     cmp r8, 0 
-;     je casoOP2Equals0
+    comiss xmm0, [rbp-4]
+    je casoOP1Equals0
 
-;     cmp r8, 1
-;     je casoOP2Equals1
+    CVTTSS2SI r8, xmm1
 
-;     loop:
-;         mulss xmm0, xmm0
-;         dec r8
-;         cmp r8, 1
-;         jne loop
+    cmp r8, 1
+    je casoOP2Equals1
 
-;     mov rbp, rsp
-;     pop rbp
-;     ret
+    cmp r8, 0
+    je casoOP2Equals0
 
-;     casoOP1Equals0:
-;         mov xmm0, 0
-;         mov rbp, rsp
-;         pop rbp
-;         ret
+    movss xmm2, xmm0
 
-;     casoOP2Equals0:
-;         mov xmm0, 1
-;         mov rbp, rsp
-;         pop rbp
-;         ret
+    loop:
+        mulss xmm2, xmm0 
+        dec r8
+        cmp r8, 1
+        jne loop
 
-;     casoOP2Equals1:
-;         mov rbp, rsp
-;         pop rbp
-;         ret
+    movss xmm0, xmm2
+    mov rsp, rbp
+    pop rbp
+    ret
 
-; escrevesolucaoOK:
-;     push rbp
-;     mov rbp, rsp
+    casoOP1Equals0:
+        movss xmm0, [rbp-4]
+        mov rsp, rbp
+        pop rbp
+        ret
 
-;     cvtss2sd xmm0, [op1]
-;     cvtss2sd xmm1, [op2]
+    casoOP2Equals0:
+        cvtsi2ss xmm0, dword [rbp-8]
+        mov rsp, rbp
+        pop rbp
+        ret
 
-;     mov rax, 2
-;     mov rdi, [fileP]
-;     mov rsi, strCtrlSaida
-;     mov rdx, [operador]
-;     call fprintf
+    casoOP2Equals1:
+        mov rsp, rbp
+        pop rbp
+        ret
 
-;     mov rdi, [fileP]
-;     call fclose
-;     jmp fim
+escrevesolucaoOK:
+    push rbp
+    mov rbp, rsp
 
-;     mov rbp, rsp
-;     pop rbp
-;     ret
-; escrevesolucaoNOTOK:
-;     push rbp
-;     mov rbp, rsp
+    sub rsp, 16
 
-;     xor rax, rax
-    
-;     mov rdi, fileName
-;     mov rsi, openingMode
-;     call fopen
+    ;Move para variável local o ponteiro para arquivo
+    mov [rbp-8], rsi
 
-;     mov [fileP], rax
+    ;Parametros op1, op2 e resultado (converte p/ double)
+    cvtss2sd xmm0, xmm0
+    cvtss2sd xmm1, xmm1
+    cvtss2sd xmm2, xmm2
+    ;Parametro operação (char)
+    mov rdx, rdi
+    ;Aponta que 3 floats serão escritos
+    mov rax, 3    
+    ;Parametro ponteiro para arquivo
+    mov rdi, [rbp-8]
+    ;Parametro string de controle
+    mov rsi, strOK
+    call fprintf
 
-;     cvtss2sd xmm0, [op1]
-;     cvtss2sd xmm1, [op2]
+    mov rdi, [rbp-8]
+    call fclose
 
-;     mov rax, 2
-;     mov rdi, [fileP]
-;     mov rsi, strCtrlSaida
-;     mov rdx, [operador]
-;     call fprintf
+    mov rsp, rbp
+    pop rbp
+    ret
 
-;     mov rdi, [fileP]
-;     call fclose
-;     jmp fim
+escrevesolucaoNOTOK:
+    push rbp
+    mov rbp, rsp
 
-;     mov rbp, rsp
-;     pop rbp
-;     ret
+    sub rsp, 16
+
+    ;Move para variável local o ponteiro para arquivo
+    mov [rbp-8], rsi
+
+    cvtss2sd xmm0, xmm0
+    cvtss2sd xmm1, xmm1
+
+    ;Parametro operação (char)
+    mov rdx, rdi
+    ;Aponta que 2 floats serão escritos
+    mov rax, 2    
+    ;Parametro ponteiro para arquivo
+    mov rdi, [rbp-8]
+    ;Parametro string de controle
+    mov rsi, strErro
+    call fprintf
+
+    mov rdi, [rbp-8]
+    call fclose
+
+    mov rsp, rbp
+    pop rbp
+    ret
 
