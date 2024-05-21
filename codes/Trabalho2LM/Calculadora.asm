@@ -29,16 +29,19 @@ main:
     ;==========================================================================================
     ; Reserva de memória para variáveis locais
     ; Para chamadas em C, necessário alinhar a pilha em 16 bytes
-    ; Então, subtrai de rsp o próximo múltiplo de 16 em quantidade necessária para as variáveis
+    ; Então, subtrai de rsp o próximo múltiplo de 16 em quantidade suficiente para as variáveis
     sub rsp, 16
     ;==========================================================================================
 
-    ;Leitura das variaveis
-    mov rdi, strCtrlEntrada
-    lea rsi, [rbp-4] ;primeira variavel local contendo o operando 1
-    lea rdx, [rbp-5] ;segunda variavel local contendo o operador
-    lea rcx, [rbp-9] ;terceira variavel local contendo o operando 2
+    ;===== Leitura das variaveis com scanf ==================
+    mov rdi, strCtrlEntrada ;String de controle
+
+    ;Aqui passamos a referência das variáveis locais
+    lea rsi, [rbp-4] ;operando 1
+    lea rdx, [rbp-5] ;operador
+    lea rcx, [rbp-9] ;operando 2
     call scanf
+    ;========================================================
 
     ;passando op1 e op2 como parametros para as funcoes
     movss xmm0, [rbp-4] 
@@ -71,23 +74,26 @@ main:
 callAdicao:
     call adicao
 
-    movss [rbp-13], xmm0
+    ;necessário salvar xmm0 pois seu conteúdo é destruído na chamada openf
+    movss [rbp-13], xmm0 
 
-    xor rax, rax
-    mov rdi, fileName
-    mov rsi, openingMode
+    xor rax, rax ;zeramos rax por convenção
+    mov rdi, fileName ;arg1: nome do arquivo
+    mov rsi, openingMode ;arq2: modo de abertura 
     call fopen
 
-    movss xmm2, [rbp-13]
-    movss xmm0, [rbp-4]
-    movss xmm1, [rbp-9]
-    mov rdi, '+'
-    mov rsi, rax
+    movss xmm2, [rbp-13] ;arg 3 (PF): resultado
+    movss xmm0, [rbp-4] ;arg 2 (PF): op 2
+    movss xmm1, [rbp-9] ;arg 1 (PF): op 1
+    mov rdi, '+' ;arg 1: operador
+    mov rsi, rax ;arg 2: ponteiro para arquivo (retornado por fopen)
     call escrevesolucaoOK
     
     jmp fim
 
 callSubtracao:
+    ;Processos iguais à callAdicao, só muda operação
+
     call subtracao  
 
     movss [rbp-13], xmm0
@@ -97,16 +103,17 @@ callSubtracao:
     mov rsi, openingMode
     call fopen
 
-    ;passagem de parametros para escrever arquivo
     movss xmm2, [rbp-13]
     movss xmm0, [rbp-4]
     movss xmm1, [rbp-9]
     mov rdi, '-'
-    mov rsi, rax ; ponteiro do arquivo retornado por fopen passa para rsi
+    mov rsi, rax 
     call escrevesolucaoOK
     jmp fim
 
 callMult:
+    ;Processos iguais à callAdicao, só muda operação
+
     call multiplicacao  
 
     movss [rbp-13], xmm0
@@ -126,26 +133,30 @@ callMult:
     jmp fim
 
 callDivisao:
-    xor rax, rax
-    
-    mov rdi, fileName
+    ;abertura do arquivo
+    xor rax, rax 
+    mov rdi, fileName 
     mov rsi, openingMode
     call fopen
 
-    ; Recupera valores para os registradores
+    ; Recupera valores para os registradores (foram destruídos pela chamada fopen)
     movss xmm0, [rbp-4] 
     movss xmm1, [rbp-9]
 
+    ;Armazena o operador a ser escrito
     mov rbx, '/' 
 
+    ;Variável local usada para fazer comparação
     mov dword [rbp-13], 0
 
+    ; Verifica se op2 é igual à zero
     COMISS xmm1, [rbp-13]
     je callEscreveNOTOK
 
+    ; Caso op2 não for zero, chama a função que faz cálculo
     call divisao
 
-    ;passagem de parametros para escrever arquivo
+    ;passagem de parametros para escrever no arquivo
     movss xmm2, xmm0 ;resultado
     movss xmm0, [rbp-4] ;op1
     movss xmm1, [rbp-9] ;op2
@@ -156,6 +167,8 @@ callDivisao:
 
 
 callExp:
+    ;Processo igual à callDivisao, só muda a comparação para verificar se op2 é menor que zero
+
     xor rax, rax
     
     mov rdi, fileName
@@ -184,12 +197,16 @@ callExp:
     jmp fim
 
 callEscreveNOTOK:
-    mov rdi, rbx
-    mov rsi, rax
+    ;op1 e op2 já estão nos devidos registradores
+
+    mov rdi, rbx ;arg 1: operador
+    mov rsi, rax ;arg 2: ponteiro para o arquivo
     call escrevesolucaoNOTOK
     jmp fim
 
 fim:
+    ;Descria o stack-frame da main, encerra programa
+
     mov rsp, rbp
     pop rbp
 
@@ -198,6 +215,8 @@ fim:
     syscall
     
 adicao: 
+    ; retorna op1 + op2
+
     push rbp
     mov rbp, rsp
 
@@ -209,6 +228,8 @@ adicao:
     ret 
 
 subtracao:
+    ; retorna op1 - op2
+
     push rbp
     mov rbp, rsp
 
@@ -220,6 +241,8 @@ subtracao:
     ret
 
 multiplicacao:
+    ; retorna op1 * op2
+
     push rbp
     mov rbp, rsp
 
@@ -231,6 +254,8 @@ multiplicacao:
     ret
     
 divisao:
+    ; retorna op1 / op2
+
     push rbp
     mov rbp, rsp
 
@@ -242,27 +267,36 @@ divisao:
     ret
 
 exponenciacao:
+    ; retorna op1 ^ op2  
+
     push rbp
     mov rbp, rsp
 
     sub rsp, 16
 
+    ; variáveis locais usadas para fazer comparações
     mov dword [rbp-4], 0
     mov dword [rbp-8], 1
 
+    ; caso especial: op1 = 0
     comiss xmm0, [rbp-4]
     je casoOP1Equals0
 
+    ; converte op2 para inteiro 
     CVTTSS2SI r8, xmm1
 
+    ; caso especial: op2 = 1
     cmp r8, 1
     je casoOP2Equals1
 
+    ; caso especial: op2 = 0
     cmp r8, 0
     je casoOP2Equals0
 
+    ; usa xmm2 como auxiliar
     movss xmm2, xmm0
 
+    ; calcula a exponenciação
     loop:
         mulss xmm2, xmm0 
         dec r8
@@ -300,20 +334,26 @@ escrevesolucaoOK:
     ;Move para variável local o ponteiro para arquivo
     mov [rbp-8], rsi
 
+    ; === Chamada fprintf ==================================
+
     ;Parametros op1, op2 e resultado (converte p/ double)
     cvtss2sd xmm0, xmm0
     cvtss2sd xmm1, xmm1
     cvtss2sd xmm2, xmm2
-    ;Parametro operação (char)
-    mov rdx, rdi
-    ;Aponta que 3 floats serão escritos
-    mov rax, 3    
-    ;Parametro ponteiro para arquivo
-    mov rdi, [rbp-8]
-    ;Parametro string de controle
-    mov rsi, strOK
-    call fprintf
 
+    
+    mov rdx, rdi ;Parametro operação (char)
+
+    mov rax, 3 ;3 floats serão escritos
+
+    
+    mov rdi, [rbp-8] ;Parametro ponteiro para arquivo
+    
+    mov rsi, strOK ;Parametro string de controle
+    call fprintf
+    ; ==========================================================
+
+    ; Fechar arquivo
     mov rdi, [rbp-8]
     call fclose
 
@@ -322,6 +362,8 @@ escrevesolucaoOK:
     ret
 
 escrevesolucaoNOTOK:
+    ; Função igual à escreveNOTOK, porém sem o parâmetro resultado 
+
     push rbp
     mov rbp, rsp
 
@@ -349,4 +391,3 @@ escrevesolucaoNOTOK:
     mov rsp, rbp
     pop rbp
     ret
-
